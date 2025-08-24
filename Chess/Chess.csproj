@@ -8,4 +8,66 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="Images\BlackBishop.png" />
+    <None Remove="Images\BlackKing.png" />
+    <None Remove="Images\BlackKnight.png" />
+    <None Remove="Images\BlackPawn.png" />
+    <None Remove="Images\BlackQueen.png" />
+    <None Remove="Images\BlackRook.png" />
+    <None Remove="Images\BlackTurn.png" />
+    <None Remove="Images\CheckBlackKing.png" />
+    <None Remove="Images\CheckWhiteKing.png" />
+    <None Remove="Images\RedBlackBishop.png" />
+    <None Remove="Images\RedBlackKing.png" />
+    <None Remove="Images\RedBlackKnight.png" />
+    <None Remove="Images\RedBlackPawn.png" />
+    <None Remove="Images\RedBlackQueen.png" />
+    <None Remove="Images\RedBlackRook.png" />
+    <None Remove="Images\RedWhiteBishop.png" />
+    <None Remove="Images\RedWhiteKing.png" />
+    <None Remove="Images\RedWhiteKnight.png" />
+    <None Remove="Images\RedWhitePawn.png" />
+    <None Remove="Images\RedWhiteQueen.png" />
+    <None Remove="Images\RedWhiteRook.png" />
+    <None Remove="Images\WhiteBishop.png" />
+    <None Remove="Images\WhiteKing.png" />
+    <None Remove="Images\WhiteKnight.png" />
+    <None Remove="Images\WhitePawn.png" />
+    <None Remove="Images\WhiteQueen.png" />
+    <None Remove="Images\WhiteRook.png" />
+    <None Remove="Images\WhiteTurn.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Images\BlackBishop.png" />
+    <Resource Include="Images\BlackKing.png" />
+    <Resource Include="Images\BlackKnight.png" />
+    <Resource Include="Images\BlackPawn.png" />
+    <Resource Include="Images\BlackQueen.png" />
+    <Resource Include="Images\BlackRook.png" />
+    <Resource Include="Images\BlackTurn.png" />
+    <Resource Include="Images\CheckBlackKing.png" />
+    <Resource Include="Images\CheckWhiteKing.png" />
+    <Resource Include="Images\RedBlackBishop.png" />
+    <Resource Include="Images\RedBlackKing.png" />
+    <Resource Include="Images\RedBlackKnight.png" />
+    <Resource Include="Images\RedBlackPawn.png" />
+    <Resource Include="Images\RedBlackQueen.png" />
+    <Resource Include="Images\RedBlackRook.png" />
+    <Resource Include="Images\RedWhiteBishop.png" />
+    <Resource Include="Images\RedWhiteKing.png" />
+    <Resource Include="Images\RedWhiteKnight.png" />
+    <Resource Include="Images\RedWhitePawn.png" />
+    <Resource Include="Images\RedWhiteQueen.png" />
+    <Resource Include="Images\RedWhiteRook.png" />
+    <Resource Include="Images\WhiteBishop.png" />
+    <Resource Include="Images\WhiteKing.png" />
+    <Resource Include="Images\WhiteKnight.png" />
+    <Resource Include="Images\WhitePawn.png" />
+    <Resource Include="Images\WhiteQueen.png" />
+    <Resource Include="Images\WhiteRook.png" />
+    <Resource Include="Images\WhiteTurn.png" />
+  </ItemGroup>
+
 </Project>
