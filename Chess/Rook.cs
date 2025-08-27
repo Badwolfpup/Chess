@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
@@ -15,6 +16,9 @@ namespace Chess
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyname));
         }
+
+        public ObservableCollection<Square> PossibleMoves { get; set; }
+        public ObservableCollection<Square> TestPossibleMoves { get; set; }
         private string _imagesource;
         public string ImageSource
         {
@@ -44,9 +48,11 @@ namespace Chess
             }
         }
         public bool IsSelected { get; set; }
-
+        public bool CheckingPiece { get; set; }
         public Rook(bool isWhite)
         {
+            PossibleMoves = new ObservableCollection<Square>();
+            TestPossibleMoves = new ObservableCollection<Square>();
             IsWhite = isWhite;
             ImageSource = $"pack://application:,,,/Images/{(IsWhite ? "White" : "Black")}Rook.png";
             AddDirections();

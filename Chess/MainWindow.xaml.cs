@@ -2,7 +2,9 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data;
+using System.Globalization;
 using System.Printing;
+using System.Security.AccessControl;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -10,9 +12,11 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Xml;
 
 namespace Chess
 {
@@ -21,6 +25,33 @@ namespace Chess
     /// </summary>
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
+        private double _screenheight;
+        private double _screenwidth;
+        public double ScreenHeight
+        {
+            get => _screenheight;
+            set
+            {
+                if (_screenheight != value)
+                {
+                    _screenheight = value;
+                    OnPropertyChanged(nameof(ScreenHeight));
+                }
+            }
+        }
+
+        public double ScreenWidth
+        {
+            get => _screenwidth;
+            set
+            {
+                if (_screenwidth != value)
+                {
+                    _screenwidth = value;
+                    OnPropertyChanged(nameof(ScreenWidth));
+                }
+            }
+        }
         public ObservableCollection<Square> Squares { get; set; }
         private bool _whiteplayerturn;
         public bool WhitePlayerTurn
@@ -72,9 +103,21 @@ namespace Chess
                 }
             }
         }
-
         private Border? _selectedBorder;
-        private Square? _checkingPiece;
+
+        private Square _clickedsquare;
+        public Square ClickedSquare
+        {
+            get => _clickedsquare;
+            set
+            {
+                if (value != _clickedsquare)
+                {
+                    _clickedsquare = value;
+                    OnPropertyChanged(nameof(ClickedSquare));
+                }
+            }
+        }
         private string _ganeinfo;
         public string GameInfo
         {
@@ -88,13 +131,22 @@ namespace Chess
                 }
             }
         }
-
+        private bool _isgameover;
+        private bool _hasmoved;
         public MainWindow()
         {
             InitializeComponent();
+            SetScreenDimensions();
             InitializeBoard();
             WhitePlayerTurn = true;
             DataContext = this;
+        }
+
+        private void SetScreenDimensions()
+        {
+            ScreenHeight = SystemParameters.PrimaryScreenHeight < 1200 ? SystemParameters.PrimaryScreenHeight * 0.9 : 1100;
+            ScreenWidth = ScreenHeight;
+            //ScreenWidth = SystemParameters.PrimaryScreenWidth < 1200 ? SystemParameters.PrimaryScreenHeight * 0.9 : 1100;
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -106,6 +158,7 @@ namespace Chess
 
         private void InitializeBoard()
         {
+            ClickedSquare = default!;
             Squares = new();
             for (int i = 0; i < 64; i++)
             {
@@ -148,96 +201,93 @@ namespace Chess
         {
             if (sender is Border border && border.DataContext is Square square && square != null)
             {
+                if (_isgameover) return; //If the game is over, do nothing
                 if (_selectedBorder == null && square.Piece == null) return; //If nothing is selected and the square is empty, do nothing
-                if (_selectedBorder == null && square.Piece != null && square.Piece.IsWhite == WhitePlayerTurn) // If nothing is selected and the square has a piece, select it
+
+                // If nothing is selected and the square has a piece, select it
+                if (_selectedBorder == null && square.Piece != null && square.Piece.IsWhite == WhitePlayerTurn) 
                 {
+                    RevertBackground();
+                    ClickedSquare = square;
                     _selectedBorder = border;
                     square.Color = Brushes.BlueViolet;
                     square.Piece.IsSelected = true;
-                    if (square.Piece is Pawn) CheckPawnsPossiblePaths(square, square.Piece);
-                    else CheckPossiblePaths(square, square.Piece);
-
+                    CheckAllPaths();
                     return;
                 }
-                //If a piece is selected and the player clicks one of his own pieces, change the selection
+                //If a piece is selected and the player clicks one of his own pieces, change the selection (or do nothing if its same pice)
                 if (_selectedBorder != null && _selectedBorder.DataContext is Square selectedSquare && selectedSquare != null && square.Piece != null && square.Piece.IsWhite == selectedSquare.Piece.IsWhite)
                 {
                     RevertBackground();
+                    ClickedSquare = square;
                     square.Color = Brushes.BlueViolet;
                     _selectedBorder = border;
                     var newSquare = _selectedBorder.DataContext as Square;
                     if (newSquare == null || newSquare.Piece == null) return;
                     newSquare.Piece.IsSelected = true;
-                    if (square.Piece is Pawn) CheckPawnsPossiblePaths(square, square.Piece);
-                    else CheckPossiblePaths(square, square.Piece);
+                    CheckAllPaths();
                     return;
                 }
                 //If a piece is selected and the player clicks a valid square, move the piece
-                if (Squares.Any(item => item.Piece != null && item.Piece.IsSelected) && square.Color == Brushes.PaleVioletRed)
+                if (Squares.Any(item => item.Piece != null && item.Piece.IsSelected) && ClickedSquare.Piece.PossibleMoves.Any(x => x == square))
                 {
-                    
-                    var oldSquare = Squares.FirstOrDefault(item => item.Piece != null && item.Piece.IsSelected);
-                    if (oldSquare != null)
+                    //Check if the move puts the player's own king in check
+                    var newsquare = ClickedSquare.Piece.PossibleMoves.FirstOrDefault(x => x == square);
+                    if (newsquare == null) return;
+                    var savenewsquare = newsquare.Piece != null ? newsquare.Piece : default!;
+                    newsquare.Piece = ClickedSquare.Piece;
+                    ClickedSquare.Piece = default!;
+                    TestAllPaths();
+                    if (Squares.Where(x => x.Piece != null && x.Piece.IsWhite != WhitePlayerTurn).Any(x => x.Piece != null && x.Piece.TestPossibleMoves.Any(x => x == Squares.FirstOrDefault(x => x.Piece != null && x.Piece is King && x.Piece.IsWhite == WhitePlayerTurn))))
                     {
-                        square.Piece = oldSquare.Piece;
-                        if (square.Piece is Pawn pawn)
+                        GameInfo = "Invalid move. You cannnot end a move in check!";
+                        ClickedSquare.Piece = newsquare.Piece;
+                        newsquare.Piece = savenewsquare != null ? savenewsquare : default!;
+                        return;
+                    }
+                    else
+                    {
+                        if (ClickedSquare.Piece is Pawn pawn)
                         {
                             //Check for en passant
-                            if (square.Position.Y - oldSquare.Position.Y == 2 || square.Position.Y - oldSquare.Position.Y == -2)
+                            if (newsquare.Position.Y - ClickedSquare.Position.Y == 2 || newsquare.Position.Y - ClickedSquare.Position.Y == -2)
                             {
                                 pawn.EnPassant = true;
                             }
                             pawn.MadeFirstMove = true;
                         }
-                        //Checks if a move results in blocking a existing check
-                        oldSquare.Piece = null;
-                        if (CheckIfOwnCheck())
+                        if (newsquare.Piece is Pawn pawn1 && pawn1.EnPassant)
                         {
-                            GameInfo = "Invalid move. You cannnot end a move in check!";
-                            oldSquare.Piece = square.Piece;
-                            square.Piece = null;
-                              return;
+                            var enpassantsquare = Squares.FirstOrDefault(x => x.Position == new Point(newsquare.Position.X, newsquare.Position.Y + (ClickedSquare.Piece.IsWhite ? 1 : -1)));
+                            if (enpassantsquare != null)
+                            {
+                                enpassantsquare.Piece = newsquare.Piece;
+                                newsquare.Piece = default!;
+                            }
                         }
                         else
                         {
-                            if (CheckIfKingInCheck(square, square.Piece)) GameInfo = $"{(WhitePlayerTurn ? "Black" : "White")} king is checked";
-                            else
-                            {
-                                var kings = Squares.Select(x => x.Piece).OfType<King>().ToList();
-
-                                foreach (var king in kings)
-                                {
-                                    king.InCheck = false;
-                                }
-                                GameInfo = "";
-
-                            }
-                            oldSquare.Piece = null;
+                            //newsquare.Piece = ClickedSquare.Piece;
                         }
-                            
+                        ClickedSquare.Piece = default!;
+                        _hasmoved = true;
                     }
+                    CheckAllPaths();
+
                     Squares.Where(item => item.Piece != null && item.Piece.IsWhite == !WhitePlayerTurn && item.Piece is Pawn pawn && pawn.EnPassant).ToList().ForEach(item =>
                     {
                         var pawn1 = item.Piece as Pawn;
                         if (pawn1 != null) pawn1.EnPassant = false;
                     }); //When a player makes a move, remove the en passant ability from all opponent pawns
+                    RevertBackground();
+
+                    
+
                     WhitePlayerTurn = !WhitePlayerTurn;
-                    RevertBackground();
-                    if (IsCheckmate())
-                    {
-                        GameInfo = $"Checkmate! {(WhitePlayerTurn ? "Black" : "White")} player wins!";
-                    }
-                    //else if (_checkingPiece != null && _checkingPiece.Piece != null)
-                    //{
-                    //    GameInfo = $"{(_checkingPiece.Piece.IsWhite ? "White" : "Black")} King is in check!";
-                    //}
+
                     return;
                 }
-                if (_selectedBorder != null && square.Piece != null && square.Piece.IsSelected)
-                {
-                    RevertBackground();
-                    return;
-                }
+
 
             }
         }
@@ -253,13 +303,26 @@ namespace Chess
                     //if (item.Piece is King king && king != null && king.InCheck) continue; //If the king is in check, don't change its image
                     item.Piece.IsInDanger = false;
                     item.Piece.IsSelected = false;
-
+                    item.Piece.CheckingPiece = false;
                 }
             }
+            _hasmoved = false;
             _selectedBorder = null;
         }
 
-        private void CheckPawnsPossiblePaths(Square square, IPiece piece)
+        private void CheckPiecesInDanger()
+        {
+            foreach (var item in Squares)
+            {
+                if (item.Piece != null) item.Piece.IsInDanger = false;
+            }
+            if (ClickedSquare == null || ClickedSquare.Piece == null) return;
+            foreach (var item in ClickedSquare.Piece.PossibleMoves)
+            {
+                if (item.Piece != null && item.Piece.IsWhite != WhitePlayerTurn) item.Piece.IsInDanger = true;
+            }
+        }
+        private void CheckPawnsPossiblePaths(Square square, IPiece piece, bool realmove)
         {
             //Check moving 1 step, either forward or diagonal
             if (piece.IsWhite ? square.Position.Y + 1 <= 8 : square.Position.Y - 1 >=1)
@@ -271,7 +334,8 @@ namespace Chess
                     if (newsquare != null && newsquare.Piece != null && newsquare.Piece.IsWhite != piece.IsWhite)
                     {
                         newsquare.Color = Brushes.PaleVioletRed;
-                        newsquare.Piece.IsInDanger = true;
+                        if (realmove) piece.PossibleMoves.Add(newsquare);
+                        else piece.TestPossibleMoves.Add(newsquare);
                     }
                     var enpassantsquare = Squares.FirstOrDefault(x => x.Position.X == square.Position.X - 1 && x.Position.Y == square.Position.Y);
                     if (enpassantsquare != null && enpassantsquare.Piece != null && enpassantsquare.Piece is Pawn pawn && pawn.IsWhite != piece.IsWhite && pawn.EnPassant)
@@ -280,7 +344,8 @@ namespace Chess
                         if (targetSquare != null && targetSquare.Piece != null)
                         {
                             targetSquare.Color = Brushes.PaleVioletRed;
-                            pawn.IsInDanger = true;
+                            if (realmove) piece.PossibleMoves.Add(targetSquare);
+                            else piece.TestPossibleMoves.Add(targetSquare);
                         }
                     }
                 }
@@ -291,7 +356,8 @@ namespace Chess
                     if (newsquare != null && newsquare.Piece != null && newsquare.Piece.IsWhite != piece.IsWhite)
                     {
                         newsquare.Color = Brushes.PaleVioletRed;
-                        newsquare.Piece.IsInDanger = true;
+                        if (realmove) piece.PossibleMoves.Add(newsquare);
+                        else piece.TestPossibleMoves.Add(newsquare);
                     }
                     var enpassantsquare = Squares.FirstOrDefault(x => x.Position.X == square.Position.X + 1 && x.Position.Y == square.Position.Y);
                     if (enpassantsquare != null && enpassantsquare.Piece != null && enpassantsquare.Piece is Pawn pawn && pawn.IsWhite != piece.IsWhite && pawn.EnPassant)
@@ -300,7 +366,8 @@ namespace Chess
                         if (targetSquare != null && targetSquare.Piece != null)
                         {
                             targetSquare.Color = Brushes.PaleVioletRed;
-                            pawn.IsInDanger = true;
+                            if (realmove) piece.PossibleMoves.Add(targetSquare);
+                            else piece.TestPossibleMoves.Add(targetSquare);
                         }
                     }
                 }
@@ -310,7 +377,8 @@ namespace Chess
                 if (forwardsquare != null && forwardsquare.Piece == null)
                 {
                     forwardsquare.Color = Brushes.PaleVioletRed;
-
+                    if (realmove) piece.PossibleMoves.Add(forwardsquare);
+                    else piece.TestPossibleMoves.Add(forwardsquare);
                     //Check moving 2 steps
                     var pawn = piece as Pawn;
                     if (pawn == null) return;
@@ -320,7 +388,8 @@ namespace Chess
                         if (twosquare != null && twosquare.Piece == null)
                         {
                             twosquare.Color = Brushes.PaleVioletRed;
-
+                            if (realmove) piece.PossibleMoves.Add(twosquare);
+                            else piece.TestPossibleMoves.Add(twosquare);
                         }
                     }
                 }             
@@ -329,7 +398,7 @@ namespace Chess
 
         }
 
-        private void CheckPossiblePaths(Square square, IPiece piece)
+        private void CheckPossiblePaths(Square square, IPiece piece, bool realmove)
         {
             piece.PossibleDirections.ForEach(item => {
                 var newX = square.Position.X + item.X;
@@ -340,7 +409,9 @@ namespace Chess
                     if (newsquare != null)
                     {
                         if (newsquare.Piece != null && newsquare.Piece.IsWhite == piece.IsWhite) break;
-                        newsquare.Color = Brushes.PaleVioletRed;
+                        if (realmove) piece.PossibleMoves.Add(newsquare);
+                        else piece.TestPossibleMoves.Add(newsquare);
+                            newsquare.Color = Brushes.PaleVioletRed;
                         if (newsquare.Piece != null && newsquare.Piece.IsWhite != piece.IsWhite)
                         {
                             newsquare.Piece.IsInDanger = true;
@@ -354,201 +425,163 @@ namespace Chess
             });
         }
 
-        private bool CheckIfKingInCheck(Square square, IPiece piece)
+        private void TestAllPaths()
         {
-            foreach (var item in piece.PossibleDirections) {
-                var newX = square.Position.X + item.X;
-                var newY = square.Position.Y + item.Y;
-                while (newX >= 1 && newX <= 8 && newY >= 1 && newY <= 8)
+            foreach (var item in Squares)
+            {
+                if (item.Piece != null) item.Piece.TestPossibleMoves.Clear();
+            }
+            var pawns = Squares.Where(x => x.Piece != null && x.Piece.IsWhite != WhitePlayerTurn && x.Piece is Pawn).ToList();
+            var otherpieces = Squares.Where(x => x.Piece != null && x.Piece.IsWhite != WhitePlayerTurn && x.Piece is not Pawn).ToList();
+            foreach (var item in pawns)
+            {
+                if (item.Piece != null)
                 {
-                    var newsquare = Squares.FirstOrDefault(x => x.Position.X == newX && x.Position.Y == newY);
-                    if (newsquare != null)
-                    {
-                        if (newsquare.Piece != null && newsquare.Piece.IsWhite == piece.IsWhite) return false;
-                        if (newsquare.Piece != null && newsquare.Piece.IsWhite != piece.IsWhite && newsquare.Piece is not King) return false;
-                        if (newsquare.Piece != null && newsquare.Piece.IsWhite != piece.IsWhite && newsquare.Piece is King)
-                        {
-                            _checkingPiece = square;
-                            var king = newsquare.Piece as King;
-                            if (king == null)
-                            {
-                                return false;
-                            }
-                            king.InCheck = true;
-                            return true;
-                        }
-                    }
-                    newX += item.X;
-                    newY += item.Y;
-                    if (piece is Knight || piece is King || piece is Pawn) break; //Knight and King can only move one step in each direction
-                }               
+                    item.Piece.PossibleMoves.Clear();
+                    CheckPawnsPossiblePaths(item, item.Piece,false);
+                }
+            }
+            foreach (var item in otherpieces)
+            {
+                if (item.Piece != null)
+                {
+                    item.Piece.PossibleMoves.Clear();
+                    CheckPossiblePaths(item, item.Piece, false);
+                }
+            }
+        }
+
+        private void CheckAllPaths()
+        {
+            var pawns = Squares.Where(x => x.Piece != null && x.Piece is Pawn).ToList();
+            var otherpieces = Squares.Where(x => x.Piece != null && x.Piece is not Pawn).ToList();
+            foreach (var item in pawns)
+            {
+                if (item.Piece != null)
+                {
+                    item.Piece.PossibleMoves.Clear();
+                    CheckPawnsPossiblePaths(item, item.Piece, true);
+                }
+            }
+            foreach (var item in otherpieces)
+            {
+                if (item.Piece != null)
+                {
+                    item.Piece.PossibleMoves.Clear();
+                    CheckPossiblePaths(item, item.Piece, true);
+                }
             }
 
+            CheckPiecesInDanger();
+            CheckIfKingInCheck();
+            // Notify UI to refresh all squares
+            foreach (var square in Squares)
+            {
+                square.OnPropertyChanged(nameof(Square.Color));
+            }
+        }
+
+
+        private void CheckIfKingInCheck()
+        {
+
+            if (Squares.Where(x => x.Piece != null && x.Piece.IsWhite == WhitePlayerTurn).SelectMany(y => y.Piece.PossibleMoves).Any(z => z.Piece is King))
+            {
+                var checkingpiece = Squares.Where(x => x.Piece != null && x.Piece.IsWhite == WhitePlayerTurn).FirstOrDefault(y => y.Piece.PossibleMoves.Any(z => z.Piece is King));
+                checkingpiece.Piece.CheckingPiece = true;
+                if (IsCheckmate(checkingpiece))
+                {
+                    _isgameover = true;
+                    GameInfo = $"Checkmate! {(WhitePlayerTurn ? "Black" : "White")} player wins!";
+                    return;
+                }
+                else
+                {
+                    GameInfo = $"{(WhitePlayerTurn ? "Black" : "White")} king is checked";
+                }
+            }
+            else if (_hasmoved) GameInfo = "";
+ 
+        }
+
+        private bool TestIfKingCanMove(Square square)
+        {
+            var oppositepieces = Squares.Where(x => x.Piece != null && x.Piece.IsWhite == WhitePlayerTurn).ToList(); //Get all pieces of the player who is checking the king
+            var allmoves = oppositepieces.SelectMany(x => x.Piece.PossibleMoves).ToList(); //Get all possible moves of those pieces
+            if (allmoves.Any(x => x == square)) return true; //If any of those moves can move to the square the king wants to move to, the king cannot move there
+            return false;
+
+        }
+
+        private bool TestIfPieceCanBlockChess(Square square)
+        {
+            var oppositepieces = Squares.Where(x => x.Piece != null && x.Piece.IsWhite != WhitePlayerTurn).ToList(); //Get all pieces of the player who beeing checked
+            var allmoves = oppositepieces.SelectMany(x => x.Piece.PossibleMoves).ToList(); //Get all possible moves of those pieces
+            if (allmoves.Any(x => x == square)) return true; //If any of those moves can move to the checkingpiece's possible moves, the piece can block the check
             return false;
         }
 
-        private bool CheckIfOwnCheck()
+        private bool IsCheckmate(Square checkingpiece)
         {
-            var king = Squares.FirstOrDefault(x => x.Piece != null && x.Piece is King && x.Piece.IsWhite == WhitePlayerTurn);
-            if (king == null || king.Piece == null) return false;
-            foreach (var item in Squares)
+
+            if (checkingpiece == null || checkingpiece.Piece == null) return false;
+            var kingSquare = Squares.FirstOrDefault(x => x.Piece != null && x.Piece is King && x.Piece.IsWhite != WhitePlayerTurn);
+            if (kingSquare == null) return false;
+            //Checks if thw king has any possible moves that would get it out of check
+            foreach (var item in kingSquare.Piece.PossibleMoves)
             {
-                if (item.Piece != null && item.Piece.IsWhite != WhitePlayerTurn)
-                {
-                    foreach (var direction in item.Piece.PossibleDirections)
-                    {
-                        var newX = item.Position.X + direction.X;
-                        var newY = item.Position.Y + direction.Y;
-                        while (newX >= 1 && newX <= 8 && newY >= 1 && newY <= 8)
-                        {
-                            var newsquare = Squares.FirstOrDefault(x => x.Position.X == newX && x.Position.Y == newY);
-                            if (newsquare != null)
-                            {
-                                if (newsquare.Piece != null && newsquare.Piece.IsWhite == item.Piece.IsWhite) break;
-                                if (newsquare.Piece != null && newsquare.Piece.IsWhite != item.Piece.IsWhite && newsquare != king) break;
-                                if (newsquare == king)
-                                {
-                                    return true;
-                                }
-                            }
-                            newX += direction.X;
-                            newY += direction.Y;
-                            if (item.Piece is Knight || item.Piece is King || item.Piece is Pawn) break; //Knight and King can only move one step in each direction
-                        }
-                    }
-                }
+                if (item.Piece != null && item.Piece.IsWhite == WhitePlayerTurn) continue; //If the square is occupied by a piece of the same color, skip it
+                if (item.Piece == null && !TestIfKingCanMove(item)) return false; //If the square is empty and not in check, the king can move there
+                if (item.Piece != null && item.Piece.IsWhite != WhitePlayerTurn && !TestIfKingCanMove(item)) return false; //If square has piece of opposite color and that square is not in check, the kingcan move there
             }
-            return false;
-        }
-
-        private bool IsCheckmate()
-        {
-            var kingSquare = Squares.FirstOrDefault(x => x.Piece is King && x.Piece.IsWhite == WhitePlayerTurn);
-            if (kingSquare?.Piece is not King king) return false;
-            if (!king.InCheck) return false;
-
-            var checkingSquares = new List<Square>();
-            foreach (var item in Squares)
+            foreach (var item in checkingpiece.Piece.PossibleMoves)
             {
-                if (item.Piece != null && item.Piece.IsWhite != WhitePlayerTurn)
-                {
-                    foreach (var dir in item.Piece.PossibleDirections)
-                    {
-                        int newX = (int)(item.Position.X + dir.X);
-                        int newY = (int)(item.Position.Y + dir.Y);
-                        while (newX >= 1 && newX <= 8 && newY >= 1 && newY <= 8)
-                        {
-                            var target = Squares.FirstOrDefault(s => s.Position.X == newX && s.Position.Y == newY);
-                            if (target == kingSquare)
-                            {
-                                checkingSquares.Add(item);
-                                break;
-                            }
-                            if (target?.Piece != null) break;
-                            if (item.Piece is Knight || item.Piece is King || item.Piece is Pawn) break;
-                            newX += dir.X;
-                            newY += dir.Y;
-                        }
-                    }
-                }
+                if (TestIfPieceCanBlockChess(item)) return false;
             }
-
-            if (checkingSquares.Count == 0) return false;
-            var checkingSquare = checkingSquares.First();
-
-            if (checkingSquares.Count > 1)
-            {
-                foreach (var dir in king.PossibleDirections)
-                {
-                    int newX = (int)(kingSquare.Position.X + dir.X);
-                    int newY = (int)(kingSquare.Position.Y + dir.Y);
-                    if (newX < 1 || newX > 8 || newY < 1 || newY > 8) continue;
-                    var targetSquare = Squares.FirstOrDefault(s => s.Position.X == newX && s.Position.Y == newY);
-                    if (targetSquare == null) continue;
-                    if (targetSquare.Piece != null && targetSquare.Piece.IsWhite == king.IsWhite) continue;
-
-                    IPiece? originalPiece = targetSquare.Piece;
-                    targetSquare.Piece = king;
-                    kingSquare.Piece = default!;
-                    bool stillInCheck = CheckIfOwnCheck();
-                    kingSquare.Piece = king;
-                    targetSquare.Piece = originalPiece;
-                    if (!stillInCheck) return false;
-                }
-                return true;
-            }
-
-            foreach (var dir in king.PossibleDirections)
-            {
-                int newX = (int)(kingSquare.Position.X + dir.X);
-                int newY = (int)(kingSquare.Position.Y + dir.Y);
-                if (newX < 1 || newX > 8 || newY < 1 || newY > 8) continue;
-                var targetSquare = Squares.FirstOrDefault(s => s.Position.X == newX && s.Position.Y == newY);
-                if (targetSquare == null) continue;
-                if (targetSquare.Piece != null && targetSquare.Piece.IsWhite == king.IsWhite) continue;
-
-                IPiece? originalPiece = targetSquare.Piece;
-                targetSquare.Piece = king;
-                kingSquare.Piece = default!;
-                bool stillInCheck = CheckIfOwnCheck();
-                kingSquare.Piece = king;
-                targetSquare.Piece = originalPiece;
-                if (!stillInCheck) return false;
-            }
-
-            var blockSquares = new List<Square>();
-            var dx = Math.Sign(checkingSquare.Position.X - kingSquare.Position.X);
-            var dy = Math.Sign(checkingSquare.Position.Y - kingSquare.Position.Y);
-            int x = (int)(kingSquare.Position.X + dx);
-            int y = (int)(kingSquare.Position.Y + dy);
-            while (x != checkingSquare.Position.X || y != checkingSquare.Position.Y)
-            {
-                var sq = Squares.FirstOrDefault(s => s.Position.X == x && s.Position.Y == y);
-                if (sq != null) blockSquares.Add(sq);
-                x += dx;
-                y += dy;
-            }
-
-            if (checkingSquare.Piece is Rook || checkingSquare.Piece is Bishop || checkingSquare.Piece is Queen)
-            {
-                var originalPiece = checkingSquare.Piece;
-                foreach (var pieceSquare in Squares.Where(s => s.Piece != null && s.Piece.IsWhite == WhitePlayerTurn && !(s.Piece is King)))
-                {
-                    var piece = pieceSquare.Piece!;
-                    foreach (var dir in piece.PossibleDirections)
-                    {
-                        int newX = (int)(pieceSquare.Position.X + dir.X);
-                        int newY = (int)(pieceSquare.Position.Y + dir.Y);
-                        while (newX >= 1 && newX <= 8 && newY >= 1 && newY <= 8)
-                        {
-                            var targetSquare = Squares.FirstOrDefault(s => s.Position.X == newX && s.Position.Y == newY);
-                            if (targetSquare == null) break;
-                            if (targetSquare.Piece != null && targetSquare.Piece.IsWhite == piece.IsWhite) break;
-
-                            foreach (var blockSquare in blockSquares)
-                            {
-                                if (targetSquare == blockSquare)
-                                {
-                                    IPiece? temp = targetSquare.Piece;
-                                    targetSquare.Piece = piece;
-                                    pieceSquare.Piece = null;
-                                    bool stillInCheck = CheckIfOwnCheck();
-                                    pieceSquare.Piece = piece;
-                                    targetSquare.Piece = temp;
-                                    if (!stillInCheck) return false;
-                                }
-                            }
-
-                            if (piece is Knight || piece is King || piece is Pawn) break;
-                            newX += dir.X;
-                            newY += dir.Y;
-                        }
-                    }
-                }
-            }
-
+            if (TestIfPieceCanBlockChess(checkingpiece)) return false; //Check if any piece can take the checking piece
             return true;
         }
 
+
+    }
+
+    public class BGColorConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            var square = values[1] as Square;
+            var clicked = values[2] as Square;
+
+            if (square == null) return Brushes.Transparent;
+
+            if (square.Color == Brushes.BlueViolet) return Brushes.BlueViolet;
+
+            if (clicked != null && clicked.Piece != null && clicked.Piece.PossibleMoves != null)
+            {
+                if (clicked.Piece.PossibleMoves.Count > 0 && clicked.Piece.PossibleMoves.Any(x => x == square)) return Brushes.PaleVioletRed;
+                else return square.BlackOrWhite? Brushes.LightGreen: Brushes.SandyBrown;
+            }
+            else return square.BlackOrWhite ? Brushes.LightGreen : Brushes.SandyBrown;
+        } 
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class MainGridDimensionConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value == null) return value;
+            var dim = (double)value;
+            return dim / 11 * 10;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

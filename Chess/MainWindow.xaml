@@ -5,17 +5,21 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Chess"
         mc:Ignorable="d"
-        Title="MainWindow" Height="1200" Width="1200">
+        Title="MainWindow" Height="{Binding ScreenHeight}" Width="{Binding ScreenWidth}" WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"></BooleanToVisibilityConverter>
+        <local:BGColorConverter x:Key="BGColorConverter"></local:BGColorConverter>
+        <local:MainGridDimensionConverter x:Key="MainGridDimensionConverter"></local:MainGridDimensionConverter>
     </Window.Resources>
-    <Grid Width="1000">
+    <Grid Width="{Binding ActualWidth, 
+        RelativeSource={RelativeSource AncestorType=Window}, 
+        Converter={StaticResource MainGridDimensionConverter}}">
 
         <Grid.RowDefinitions>
         
-            <RowDefinition Height="100"/>
-            <RowDefinition Height="900"/>
-            <RowDefinition Height="100"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="9*"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <TextBlock Text="{Binding GameInfo}" FontFamily="Segoe UI" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="0"></TextBlock>
         <Grid Grid.Row="1">
@@ -53,14 +57,21 @@
 
                     <ItemsPanelTemplate>
 
-                        <UniformGrid Columns="8" Rows="8" Width="800" Height="800">
+                        <UniformGrid Columns="8" Rows="8" >
 
                         </UniformGrid>
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Background="{Binding Color}" BorderBrush="Black" BorderThickness="3" MouseDown="Border_MouseDown">
+                        <Border BorderBrush="Black" BorderThickness="3" MouseDown="Border_MouseDown">
+                            <Border.Background>
+                                <MultiBinding Converter="{StaticResource BGColorConverter}">
+                                    <Binding Path="Color"></Binding>
+                                    <Binding Path="."></Binding>
+                                    <Binding Path="DataContext.ClickedSquare" RelativeSource="{RelativeSource AncestorType=Window}"></Binding>
+                                </MultiBinding>
+                            </Border.Background>
                             <Image Source="{Binding Piece.ImageSource}" 
                                    Width="80" 
                                    Height="80" 
