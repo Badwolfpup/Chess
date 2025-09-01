@@ -41,7 +41,6 @@ namespace Chess
             }
         }
         public bool IsSelected { get; set; }
-        public bool MadeFirstMove { get; set; }
         public bool EnPassant { get; set; }
         public bool CheckingPiece { get; set; }
         public Pawn(bool isWhite)
@@ -66,8 +65,12 @@ namespace Chess
         {
             PossibleDirections = new List<(int X, int Y)>
             {
+                (-1, 1), // Diagonal left
+                (1, 1), // Diagnoal right
                 (0, 1),  // Forward
-                (0, 2)   // Double Forward
+                (0, 2),   // Double Forward
+                (-1, 0), //Enpassant left
+                (1, 0)  //Enpassant right
             };
         }
 
@@ -75,8 +78,12 @@ namespace Chess
         {
             PossibleDirections = new List<(int X, int Y)>
             {
+                (-1,- 1), //Diagonal left
+                (1,- 1), //Diagonal right
                 (0, -1),  // Forward
-                (0, -2)   // Double Forward
+                (0, -2),   // Double Forward
+                (-1, 0), //Enpassant left
+                (1, 0)  //Enpassant right
             };
         }
 
