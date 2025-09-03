@@ -5,112 +5,109 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Chess"
         mc:Ignorable="d"
-        Title="MainWindow" Height="{Binding ScreenHeight}" Width="{Binding ScreenWidth}" WindowStartupLocation="CenterScreen">
+        Title="MainWindow" ResizeMode="NoResize" SizeToContent="WidthAndHeight" MinHeight="600" MinWidth="800" Height="{Binding ScreenHeight}" Width="{Binding ScreenWidth}" WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"></BooleanToVisibilityConverter>
         <local:BGColorConverter x:Key="BGColorConverter"></local:BGColorConverter>
         <local:MainGridDimensionConverter x:Key="MainGridDimensionConverter"></local:MainGridDimensionConverter>
     </Window.Resources>
-    <Grid Width="{Binding ActualWidth, 
-        RelativeSource={RelativeSource AncestorType=Window}, 
-        Converter={StaticResource MainGridDimensionConverter}}">
+    <Grid Width="{Binding ScreenWidth}" Height="{Binding ScreeenHeight}">
 
         <Grid.RowDefinitions>
         
             <RowDefinition Height="*"/>
-            <RowDefinition Height="9*"/>
+            <RowDefinition Height="8*"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <TextBlock Text="{Binding GameInfo}" FontFamily="Segoe UI" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="0"></TextBlock>
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="8*"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="8*"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-            <UniformGrid Rows="8" Grid.Row="0" Columns="1">
-                <UniformGrid.Resources>
-                    <Style TargetType="TextBlock">
-                        <Setter Property="FontSize" Value="48"></Setter>
-                        <Setter Property="FontFamily" Value="Segoe UI"></Setter>
-                        <Setter Property="FontWeight" Value="Bold"></Setter>
-                        <Setter Property="HorizontalAlignment" Value="Right"></Setter>
-                        <Setter Property="VerticalAlignment" Value="Center"></Setter>
-                        <Setter Property="Padding" Value="0 0 7 0" />
-                    </Style>
-                </UniformGrid.Resources>
-                <TextBlock>8</TextBlock>
-                <TextBlock>7</TextBlock>
-                <TextBlock>6</TextBlock>
-                <TextBlock>5</TextBlock>
-                <TextBlock>4</TextBlock>
-                <TextBlock>3</TextBlock>
-                <TextBlock>2</TextBlock>
-                <TextBlock>1</TextBlock>
-            </UniformGrid>
-            <ItemsControl ItemsSource="{Binding Squares}" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Top">
-                <ItemsControl.ItemsPanel>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="8*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <TextBlock Text="{Binding GameInfo}" FontFamily="Segoe UI" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="0" Grid.Column="1"></TextBlock>
+        
+        <UniformGrid Rows="8" Grid.Row="1" Columns="0">
+            <UniformGrid.Resources>
+                <Style TargetType="TextBlock">
+                    <Setter Property="FontSize" Value="48"></Setter>
+                    <Setter Property="FontFamily" Value="Segoe UI"></Setter>
+                    <Setter Property="FontWeight" Value="Bold"></Setter>
+                    <Setter Property="HorizontalAlignment" Value="Right"></Setter>
+                    <Setter Property="VerticalAlignment" Value="Center"></Setter>
+                    <Setter Property="Padding" Value="0 0 7 0" />
+                </Style>
+            </UniformGrid.Resources>
+            <TextBlock>8</TextBlock>
+            <TextBlock>7</TextBlock>
+            <TextBlock>6</TextBlock>
+            <TextBlock>5</TextBlock>
+            <TextBlock>4</TextBlock>
+            <TextBlock>3</TextBlock>
+            <TextBlock>2</TextBlock>
+            <TextBlock>1</TextBlock>
+        </UniformGrid>
+        
+        <ItemsControl ItemsSource="{Binding Squares}" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Top">
+            <ItemsControl.ItemsPanel>
 
-                    <ItemsPanelTemplate>
+                <ItemsPanelTemplate>
 
-                        <UniformGrid Columns="8" Rows="8" >
+                    <UniformGrid Columns="8" Rows="8" >
 
-                        </UniformGrid>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border BorderBrush="Black" BorderThickness="3" MouseDown="Border_MouseDown">
-                            <Border.Background>
-                                <MultiBinding Converter="{StaticResource BGColorConverter}">
-                                    <Binding Path="Color"></Binding>
-                                    <Binding Path="."></Binding>
-                                    <Binding Path="DataContext.ClickedSquare" RelativeSource="{RelativeSource AncestorType=Window}"></Binding>
-                                </MultiBinding>
-                            </Border.Background>
-                            <Image Source="{Binding Piece.ImageSource}" 
-                                   Width="80" 
-                                   Height="80" 
-                                   HorizontalAlignment="Center" 
-                                   VerticalAlignment="Center"/>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-
-            <UniformGrid Columns="8" Grid.Row="1" Grid.Column="1">
-                <UniformGrid.Resources>
-                    <Style TargetType="TextBlock">
-                        <Setter Property="FontSize" Value="48"></Setter>
-                        <Setter Property="FontFamily" Value="Segoe UI"></Setter>
-                        <Setter Property="FontWeight" Value="Bold"></Setter>
-                        <Setter Property="HorizontalAlignment" Value="Center"></Setter>
-                        <Setter Property="VerticalAlignment" Value="Top"></Setter>
-                        <Setter Property="Padding" Value="0 7 0 0" />
-                    </Style>
-                </UniformGrid.Resources>
-                <TextBlock>A</TextBlock>
-                <TextBlock>B</TextBlock>
-                <TextBlock>C</TextBlock>
-                <TextBlock>D</TextBlock>
-                <TextBlock>E</TextBlock>
-                <TextBlock>F</TextBlock>
-                <TextBlock>G</TextBlock>
-                <TextBlock>H</TextBlock>
-            </UniformGrid>
-            <Grid Grid.Column="2" Grid.Row="0" Margin="7 0 0 0">
+                    </UniformGrid>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border BorderBrush="Black" BorderThickness="2" MouseDown="Border_MouseDown">
+                        <Border.Background>
+                            <MultiBinding Converter="{StaticResource BGColorConverter}">
+                                <Binding Path="Color"></Binding>
+                                <Binding Path="."></Binding>
+                                <Binding Path="DataContext.ClickedSquare" RelativeSource="{RelativeSource AncestorType=Window}"></Binding>
+                            </MultiBinding>
+                        </Border.Background>
+                        <Image Source="{Binding Piece.ImageSource}" 
+                                Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=Border}}"
+                                Height="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=Border}}"
+                                Stretch="Fill"
+                                HorizontalAlignment="Center" 
+                                VerticalAlignment="Center"/>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        
+        <UniformGrid Columns="8" Grid.Row="2" Grid.Column="1">
+            <UniformGrid.Resources>
+                <Style TargetType="TextBlock">
+                    <Setter Property="FontSize" Value="48"></Setter>
+                    <Setter Property="FontFamily" Value="Segoe UI"></Setter>
+                    <Setter Property="FontWeight" Value="Bold"></Setter>
+                    <Setter Property="HorizontalAlignment" Value="Center"></Setter>
+                    <Setter Property="VerticalAlignment" Value="Top"></Setter>
+                    <Setter Property="Padding" Value="0 7 0 0" />
+                </Style>
+            </UniformGrid.Resources>
+            <TextBlock>A</TextBlock>
+            <TextBlock>B</TextBlock>
+            <TextBlock>C</TextBlock>
+            <TextBlock>D</TextBlock>
+            <TextBlock>E</TextBlock>
+            <TextBlock>F</TextBlock>
+            <TextBlock>G</TextBlock>
+            <TextBlock>H</TextBlock>
+        </UniformGrid>
+        
+        <Grid Grid.Column="2" Grid.Row="1" Margin="7 0 0 0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"></RowDefinition>
                     <RowDefinition Height="*"></RowDefinition>
                 </Grid.RowDefinitions>
-                <Image Grid.Row="0" Source="/Images/BlackTurn.png" VerticalAlignment="Center" Visibility="{Binding ShowBlackPawn, Converter={StaticResource BoolToVis}}"></Image>
-                <Image Grid.Row="1" Source="/Images/WhiteTurn.png" VerticalAlignment="Center" Visibility="{Binding ShowWhitePawn, Converter={StaticResource BoolToVis}}"></Image>
+                <Image Grid.Row="0" Width="80" Source="/Images/BlackTurn.png" VerticalAlignment="Center" Visibility="{Binding ShowBlackPawn, Converter={StaticResource BoolToVis}}"></Image>
+                <Image Grid.Row="1" Width="80" Source="/Images/WhiteTurn.png" VerticalAlignment="Center" Visibility="{Binding ShowWhitePawn, Converter={StaticResource BoolToVis}}"></Image>
             </Grid>
-        </Grid>
+
 
     </Grid>
 </Window>

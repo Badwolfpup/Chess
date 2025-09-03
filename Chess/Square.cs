@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Media;
+﻿using System.ComponentModel;
 using System.Windows;
-using System.ComponentModel;
+using System.Windows.Media;
 
 
 namespace Chess
 {
-    public class Square: INotifyPropertyChanged
+    public class Square : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -39,7 +34,7 @@ namespace Chess
 
         public Point Position { get; set; }
 
-        private SolidColorBrush _color; 
+        private SolidColorBrush _color;
         public SolidColorBrush Color
         {
             get => _color;
