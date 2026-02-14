@@ -18,16 +18,16 @@ A fully playable chess game built with C# and WPF. Features all standard chess p
 
 ```
 Chess/
-â”œâ”€â”€ IPiece.cs           # Piece interface
-â”œâ”€â”€ Bishop.cs           # Bishop movement logic
-â”œâ”€â”€ King.cs             # King movement logic
-â”œâ”€â”€ Knight.cs           # Knight movement logic
-â”œâ”€â”€ Pawn.cs             # Pawn movement logic
-â”œâ”€â”€ Queen.cs            # Queen movement logic
-â”œâ”€â”€ Rook.cs             # Rook movement logic
-â”œâ”€â”€ Square.cs           # Board square representation
-â”œâ”€â”€ MainWindow.xaml     # Game UI
-â””â”€â”€ Images/             # Piece graphics
+├── IPiece.cs           # Piece interface
+├── Bishop.cs           # Bishop movement logic
+├── King.cs             # King movement logic
+├── Knight.cs           # Knight movement logic
+├── Pawn.cs             # Pawn movement logic
+├── Queen.cs            # Queen movement logic
+├── Rook.cs             # Rook movement logic
+├── Square.cs           # Board square representation
+├── MainWindow.xaml     # Game UI
+└── Images/             # Piece graphics
 ```
 
 ## How to Run
